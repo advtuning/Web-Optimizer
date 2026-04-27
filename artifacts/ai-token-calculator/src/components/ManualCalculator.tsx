@@ -1,18 +1,28 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Calculator, DollarSign, PoundSterling, SlidersHorizontal } from "lucide-react";
 import modelsData from "@/data/models.json";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { getModelCostTier, modelAverageCost } from "@/lib/cost-tier";
 
 const GBP_RATE = 0.79;
 
 export function ManualCalculator() {
   const models = modelsData.models;
-  const [modelId, setModelId] = useState(models[0].id);
+  const sortedModels = useMemo(
+    () =>
+      [...models].sort(
+        (a, b) =>
+          modelAverageCost(a.input_cost_per_1k, a.output_cost_per_1k) -
+          modelAverageCost(b.input_cost_per_1k, b.output_cost_per_1k)
+      ),
+    [models]
+  );
+  const [modelId, setModelId] = useState(sortedModels[0].id);
   const [inTokens, setInTokens] = useState<string>("5000");
   const [outTokens, setOutTokens] = useState<string>("1500");
   const [volume, setVolume] = useState<string>("10000");
@@ -66,10 +76,24 @@ export function ManualCalculator() {
                     <SelectTrigger id="model-select" className="bg-background h-12 shadow-sm">
                       <SelectValue placeholder="Select a model" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {models.map(m => (
-                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                      ))}
+                    <SelectContent className="max-h-[340px]">
+                      {sortedModels.map(m => {
+                        const tier = getModelCostTier(m.input_cost_per_1k, m.output_cost_per_1k);
+                        return (
+                          <SelectItem key={m.id} value={m.id}>
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`inline-flex items-center justify-center h-5 min-w-6 px-1.5 rounded font-mono text-[10px] font-bold ${tier.bgClass} ${tier.textClass}`}
+                                title={`${tier.label} pricing tier`}
+                              >
+                                {tier.symbol}
+                              </span>
+                              <span>{m.name}</span>
+                              <span className="text-[10px] text-muted-foreground ml-1">{m.provider}</span>
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

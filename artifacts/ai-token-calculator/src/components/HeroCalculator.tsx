@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ChevronDown, Check, Zap, Cpu, CircleDollarSign, Sliders } from "lucide-react";
+import { ChevronDown, Check, Zap, Cpu, CircleDollarSign, Sliders, Search } from "lucide-react";
 import modelsData from "@/data/models.json";
 import projectsData from "@/data/projects.json";
+import { getModelCostTier, modelAverageCost } from "@/lib/cost-tier";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -25,8 +39,17 @@ export function HeroCalculator() {
   const models = modelsData.models;
   const projects = projectsData.projects;
 
-  const [selectedModelId, setSelectedModelId] = useState(models[0].id);
+  const sortedModels = useMemo(() => {
+    return [...models].sort(
+      (a, b) =>
+        modelAverageCost(a.input_cost_per_1k, a.output_cost_per_1k) -
+        modelAverageCost(b.input_cost_per_1k, b.output_cost_per_1k)
+    );
+  }, [models]);
+
+  const [selectedModelId, setSelectedModelId] = useState(sortedModels[0].id);
   const [selectedProjectId, setSelectedProjectId] = useState(projects[0].id);
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
   const [mode, setMode] = useState<"project" | "custom">("project");
   const [customInputTokens, setCustomInputTokens] = useState<number>(1000);
   const [customOutputTokens, setCustomOutputTokens] = useState<number>(500);
@@ -34,6 +57,7 @@ export function HeroCalculator() {
 
   const model = models.find(m => m.id === selectedModelId) || models[0];
   const project = projects.find(p => p.id === selectedProjectId) || projects[0];
+  const modelTier = getModelCostTier(model.input_cost_per_1k, model.output_cost_per_1k);
 
   const inputTokens = mode === "project" ? project.estimated_input_tokens : customInputTokens;
   const outputTokens = mode === "project" ? project.estimated_output_tokens : customOutputTokens;
@@ -54,15 +78,6 @@ export function HeroCalculator() {
 
   // Monthly cost projection
   const monthlyCostUsd = costUsd * monthlyVolume;
-
-  // Cost tier indicator
-  const getCostTier = (cost: number) => {
-    if (cost < 0.01) return { label: "Cheap", color: "bg-green-500/15 text-green-700 dark:text-green-400" };
-    if (cost < 0.05) return { label: "Moderate", color: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400" };
-    return { label: "Expensive", color: "bg-red-500/15 text-red-700 dark:text-red-400" };
-  };
-
-  const costTier = getCostTier(costUsd);
 
   return (
     <section id="hero-calculator" className="w-full py-16 md:py-24 lg:py-32 flex flex-col items-center justify-center relative overflow-hidden">
@@ -96,30 +111,53 @@ export function HeroCalculator() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="w-full justify-between bg-background h-12 text-left font-normal border-border/50 shadow-sm hover-elevate">
-                      <div className="flex flex-col items-start truncate">
-                        <span className="truncate">{model.name}</span>
-                        <span className="text-[10px] text-muted-foreground truncate">{model.provider}</span>
+                      <div className="flex items-center gap-2 truncate">
+                        <span
+                          className={`inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded font-mono text-[11px] font-bold ${modelTier.bgClass} ${modelTier.textClass}`}
+                          aria-label={`${modelTier.label} cost tier`}
+                          title={`${modelTier.label} pricing tier`}
+                        >
+                          {modelTier.symbol}
+                        </span>
+                        <div className="flex flex-col items-start truncate">
+                          <span className="truncate">{model.name}</span>
+                          <span className="text-[10px] text-muted-foreground truncate">{model.provider}</span>
+                        </div>
                       </div>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
+                      <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-[300px] overflow-y-auto">
-                    {Array.from(new Set(models.map(m => m.provider))).map(provider => (
-                      <div key={provider}>
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">{provider}</DropdownMenuLabel>
-                        {models.filter(m => m.provider === provider).map(m => (
-                          <DropdownMenuItem 
-                            key={m.id} 
-                            onClick={() => setSelectedModelId(m.id)}
-                            className="flex justify-between cursor-pointer"
+                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-[340px] overflow-y-auto">
+                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                      <span>Sorted: cheap to premium</span>
+                      <span className="font-mono normal-case tracking-normal text-muted-foreground/70">avg $/1K</span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {sortedModels.map(m => {
+                      const tier = getModelCostTier(m.input_cost_per_1k, m.output_cost_per_1k);
+                      const avg = modelAverageCost(m.input_cost_per_1k, m.output_cost_per_1k);
+                      return (
+                        <DropdownMenuItem
+                          key={m.id}
+                          onClick={() => setSelectedModelId(m.id)}
+                          className="flex items-center gap-2 cursor-pointer py-2"
+                        >
+                          <span
+                            className={`inline-flex items-center justify-center h-5 min-w-6 px-1.5 rounded font-mono text-[10px] font-bold ${tier.bgClass} ${tier.textClass} flex-shrink-0`}
                           >
-                            <span>{m.name}</span>
-                            {selectedModelId === m.id && <Check className="w-4 h-4" />}
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                      </div>
-                    ))}
+                            {tier.symbol}
+                          </span>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="truncate text-sm">{m.name}</span>
+                            <span className="text-[10px] text-muted-foreground truncate">{m.provider}</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-muted-foreground tabular-nums flex-shrink-0">
+                            ${avg < 0.001 ? avg.toFixed(5) : avg.toFixed(4)}
+                          </span>
+                          {selectedModelId === m.id && <Check className="w-4 h-4 ml-1 flex-shrink-0" />}
+                        </DropdownMenuItem>
+                      );
+                    })}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -141,33 +179,75 @@ export function HeroCalculator() {
                     <label className="text-sm font-semibold flex items-center gap-2">
                       <CircleDollarSign className="w-4 h-4 text-primary" />
                       Select Example Project
+                      <span className="ml-auto text-[10px] font-normal text-muted-foreground tabular-nums">
+                        {projects.length} ideas
+                      </span>
                     </label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between bg-background h-12 text-left font-normal border-border/50 shadow-sm hover-elevate">
-                          <div className="flex flex-col items-start truncate">
-                            <span className="truncate">{project.name}</span>
-                            <span className="text-[10px] text-muted-foreground truncate">~{project.estimated_input_tokens + project.estimated_output_tokens} tokens/req</span>
-                          </div>
-                          <ChevronDown className="h-4 w-4 opacity-50" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-[300px] overflow-y-auto">
-                        {projects.slice(0, 15).map(p => (
-                          <DropdownMenuItem
-                            key={p.id}
-                            onClick={() => setSelectedProjectId(p.id)}
-                            className="flex flex-col items-start py-2 cursor-pointer"
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <span className="font-medium">{p.name}</span>
-                              {selectedProjectId === p.id && <Check className="w-4 h-4 ml-2 flex-shrink-0" />}
+                    <Popover open={projectPickerOpen} onOpenChange={setProjectPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={projectPickerOpen}
+                          className="w-full justify-between bg-background h-12 text-left font-normal border-border/50 shadow-sm hover-elevate"
+                        >
+                          <div className="flex items-center gap-2 truncate min-w-0">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded flex-shrink-0">
+                              {project.category}
+                            </span>
+                            <div className="flex flex-col items-start truncate min-w-0">
+                              <span className="truncate">{project.name}</span>
+                              <span className="text-[10px] text-muted-foreground truncate">
+                                ~{(project.estimated_input_tokens + project.estimated_output_tokens).toLocaleString()} tokens/req
+                              </span>
                             </div>
-                            <span className="text-xs text-muted-foreground line-clamp-1">{p.description}</span>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          </div>
+                          <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <div className="flex items-center border-b px-3">
+                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                            <CommandInput
+                              placeholder="Search 100+ project ideas..."
+                              className="border-0 focus:ring-0 h-11"
+                            />
+                          </div>
+                          <CommandList className="max-h-[320px]">
+                            <CommandEmpty>No matching project found.</CommandEmpty>
+                            <CommandGroup>
+                              {projects.map(p => (
+                                <CommandItem
+                                  key={p.id}
+                                  value={`${p.name} ${p.category} ${p.description}`}
+                                  onSelect={() => {
+                                    setSelectedProjectId(p.id);
+                                    setProjectPickerOpen(false);
+                                  }}
+                                  className="flex flex-col items-start gap-1 py-2 cursor-pointer"
+                                >
+                                  <div className="flex items-center justify-between w-full gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-[9px] font-mono uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded flex-shrink-0">
+                                        {p.category}
+                                      </span>
+                                      <span className="font-medium text-sm truncate">{p.name}</span>
+                                    </div>
+                                    {selectedProjectId === p.id && (
+                                      <Check className="w-4 h-4 ml-2 flex-shrink-0 text-primary" />
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground line-clamp-1">
+                                    {p.description}
+                                  </span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="pt-4 border-t border-border/50 grid grid-cols-2 gap-4">
@@ -249,8 +329,12 @@ export function HeroCalculator() {
             <div className="p-6 md:p-10 md:col-span-3 flex flex-col justify-center bg-card">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold tracking-tight text-muted-foreground">Estimated Cost</h3>
-                <Badge className={costTier.color} variant="secondary">
-                  {costTier.label}
+                <Badge
+                  variant="secondary"
+                  className={`${modelTier.bgClass} ${modelTier.textClass} ring-1 ${modelTier.ringClass} font-mono uppercase tracking-wider text-[10px]`}
+                >
+                  <span className="font-bold mr-1">{modelTier.symbol}</span>
+                  {modelTier.label} model
                 </Badge>
               </div>
               
@@ -283,7 +367,7 @@ export function HeroCalculator() {
                   <div className="text-right sm:text-left">
                     <div className="text-sm font-medium text-muted-foreground mb-1">Assumed Volume</div>
                     <div className="font-mono text-sm font-semibold bg-background border border-border/50 rounded-md px-3 py-1.5 inline-block shadow-sm">
-                      {project.monthly_volume.toLocaleString()} reqs
+                      {monthlyVolume.toLocaleString()} reqs
                     </div>
                   </div>
                 </div>
