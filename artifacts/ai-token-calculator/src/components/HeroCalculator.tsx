@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, ChevronDown, Check, Zap, Cpu, CircleDollarSign } from "lucide-react";
+import { ChevronDown, Check, Zap, Cpu, CircleDollarSign, Sliders } from "lucide-react";
 import modelsData from "@/data/models.json";
 import projectsData from "@/data/projects.json";
 
@@ -13,8 +13,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 
 // GBP conversion rate
 const GBP_RATE = 0.79;
@@ -25,25 +27,33 @@ export function HeroCalculator() {
 
   const [selectedModelId, setSelectedModelId] = useState(models[0].id);
   const [selectedProjectId, setSelectedProjectId] = useState(projects[0].id);
+  const [mode, setMode] = useState<"project" | "custom">("project");
+  const [customInputTokens, setCustomInputTokens] = useState<number>(1000);
+  const [customOutputTokens, setCustomOutputTokens] = useState<number>(500);
+  const [customMonthlyVolume, setCustomMonthlyVolume] = useState<number>(1000);
 
   const model = models.find(m => m.id === selectedModelId) || models[0];
   const project = projects.find(p => p.id === selectedProjectId) || projects[0];
+
+  const inputTokens = mode === "project" ? project.estimated_input_tokens : customInputTokens;
+  const outputTokens = mode === "project" ? project.estimated_output_tokens : customOutputTokens;
+  const monthlyVolume = mode === "project" ? project.monthly_volume : customMonthlyVolume;
 
   const calculateCost = (inputTokens: number, outputTokens: number, inputCost: number, outputCost: number) => {
     return (inputTokens / 1000 * inputCost) + (outputTokens / 1000 * outputCost);
   };
 
   const costUsd = calculateCost(
-    project.estimated_input_tokens,
-    project.estimated_output_tokens,
+    inputTokens,
+    outputTokens,
     model.input_cost_per_1k,
     model.output_cost_per_1k
   );
 
   const costGbp = costUsd * GBP_RATE;
 
-  // Monthly cost (assuming the volume in the project)
-  const monthlyCostUsd = costUsd * project.monthly_volume;
+  // Monthly cost projection
+  const monthlyCostUsd = costUsd * monthlyVolume;
 
   // Cost tier indicator
   const getCostTier = (cost: number) => {
@@ -114,53 +124,125 @@ export function HeroCalculator() {
                 </DropdownMenu>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold flex items-center gap-2">
-                  <CircleDollarSign className="w-4 h-4 text-primary" />
-                  Select Example Project
-                </label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between bg-background h-12 text-left font-normal border-border/50 shadow-sm hover-elevate">
-                      <div className="flex flex-col items-start truncate">
-                        <span className="truncate">{project.name}</span>
-                        <span className="text-[10px] text-muted-foreground truncate">~{project.estimated_input_tokens + project.estimated_output_tokens} tokens/req</span>
-                      </div>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-[300px] overflow-y-auto">
-                    {projects.slice(0, 15).map(p => (
-                      <DropdownMenuItem 
-                        key={p.id} 
-                        onClick={() => setSelectedProjectId(p.id)}
-                        className="flex flex-col items-start py-2 cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-medium">{p.name}</span>
-                          {selectedProjectId === p.id && <Check className="w-4 h-4 ml-2 flex-shrink-0" />}
-                        </div>
-                        <span className="text-xs text-muted-foreground line-clamp-1">{p.description}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <Tabs value={mode} onValueChange={(v) => setMode(v as "project" | "custom")} className="w-full">
+                <TabsList className="grid grid-cols-2 w-full">
+                  <TabsTrigger value="project" className="text-xs">
+                    <CircleDollarSign className="w-3.5 h-3.5 mr-1.5" />
+                    Example Project
+                  </TabsTrigger>
+                  <TabsTrigger value="custom" className="text-xs">
+                    <Sliders className="w-3.5 h-3.5 mr-1.5" />
+                    Custom Tokens
+                  </TabsTrigger>
+                </TabsList>
 
-              <div className="mt-auto pt-4 border-t border-border/50 grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs text-muted-foreground font-medium mb-1">Input Tokens</div>
-                  <div className="font-mono text-sm font-semibold bg-background border border-border/50 rounded-md px-3 py-1.5 inline-block w-full">
-                    {project.estimated_input_tokens.toLocaleString()}
+                <TabsContent value="project" className="mt-4 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold flex items-center gap-2">
+                      <CircleDollarSign className="w-4 h-4 text-primary" />
+                      Select Example Project
+                    </label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between bg-background h-12 text-left font-normal border-border/50 shadow-sm hover-elevate">
+                          <div className="flex flex-col items-start truncate">
+                            <span className="truncate">{project.name}</span>
+                            <span className="text-[10px] text-muted-foreground truncate">~{project.estimated_input_tokens + project.estimated_output_tokens} tokens/req</span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-[300px] overflow-y-auto">
+                        {projects.slice(0, 15).map(p => (
+                          <DropdownMenuItem
+                            key={p.id}
+                            onClick={() => setSelectedProjectId(p.id)}
+                            className="flex flex-col items-start py-2 cursor-pointer"
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-medium">{p.name}</span>
+                              {selectedProjectId === p.id && <Check className="w-4 h-4 ml-2 flex-shrink-0" />}
+                            </div>
+                            <span className="text-xs text-muted-foreground line-clamp-1">{p.description}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground font-medium mb-1">Output Tokens</div>
-                  <div className="font-mono text-sm font-semibold bg-background border border-border/50 rounded-md px-3 py-1.5 inline-block w-full">
-                    {project.estimated_output_tokens.toLocaleString()}
+
+                  <div className="pt-4 border-t border-border/50 grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground font-medium mb-1">Input Tokens</div>
+                      <div className="font-mono text-sm font-semibold bg-background border border-border/50 rounded-md px-3 py-1.5 inline-block w-full">
+                        {project.estimated_input_tokens.toLocaleString()}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground font-medium mb-1">Output Tokens</div>
+                      <div className="font-mono text-sm font-semibold bg-background border border-border/50 rounded-md px-3 py-1.5 inline-block w-full">
+                        {project.estimated_output_tokens.toLocaleString()}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </TabsContent>
+
+                <TabsContent value="custom" className="mt-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Input Tokens</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={customInputTokens}
+                        onChange={(e) => setCustomInputTokens(Math.max(0, Number(e.target.value) || 0))}
+                        className="font-mono bg-background h-11"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Output Tokens</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={customOutputTokens}
+                        onChange={(e) => setCustomOutputTokens(Math.max(0, Number(e.target.value) || 0))}
+                        className="font-mono bg-background h-11"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Monthly Requests</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={customMonthlyVolume}
+                      onChange={(e) => setCustomMonthlyVolume(Math.max(0, Number(e.target.value) || 0))}
+                      className="font-mono bg-background h-11"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {[
+                      { label: "1K", value: 1000 },
+                      { label: "5K", value: 5000 },
+                      { label: "10K", value: 10000 },
+                      { label: "50K", value: 50000 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          setCustomInputTokens(preset.value);
+                          setCustomOutputTokens(Math.round(preset.value / 2));
+                        }}
+                        className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-background border border-border/50 hover-elevate"
+                      >
+                        {preset.label} in
+                      </button>
+                    ))}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
 
             {/* Display Side */}
