@@ -1,0 +1,158 @@
+import { useState } from "react";
+import { Calculator, DollarSign, PoundSterling, SlidersHorizontal } from "lucide-react";
+import modelsData from "@/data/models.json";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+
+const GBP_RATE = 0.79;
+
+export function ManualCalculator() {
+  const models = modelsData.models;
+  const [modelId, setModelId] = useState(models[0].id);
+  const [inTokens, setInTokens] = useState<string>("5000");
+  const [outTokens, setOutTokens] = useState<string>("1500");
+  const [volume, setVolume] = useState<string>("10000");
+  
+  const [calculated, setCalculated] = useState({
+    costUsd: 0,
+    monthlyUsd: 0
+  });
+
+  const handleCalculate = () => {
+    const model = models.find(m => m.id === modelId) || models[0];
+    const inT = parseFloat(inTokens) || 0;
+    const outT = parseFloat(outTokens) || 0;
+    const vol = parseFloat(volume) || 0;
+
+    const costUsd = (inT / 1000 * model.input_cost_per_1k) + (outT / 1000 * model.output_cost_per_1k);
+    
+    setCalculated({
+      costUsd,
+      monthlyUsd: costUsd * vol
+    });
+  };
+
+  // Run calculation initially
+  useState(() => {
+    handleCalculate();
+  });
+
+  return (
+    <section className="py-16 md:py-24 bg-muted/5 border-t border-border/40">
+      <div className="container max-w-4xl px-4 mx-auto">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold tracking-tight mb-4">Advanced Cost Calculator</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Input exact token counts and traffic volumes to forecast your monthly API infrastructure spend.
+          </p>
+        </div>
+
+        <Card className="border-border/50 shadow-lg bg-card/50 backdrop-blur">
+          <CardContent className="p-6 md:p-8">
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12">
+              
+              {/* Inputs */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="model-select" className="text-sm font-semibold flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-primary" />
+                    AI Model
+                  </Label>
+                  <Select value={modelId} onValueChange={setModelId}>
+                    <SelectTrigger id="model-select" className="bg-background h-12 shadow-sm">
+                      <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {models.map(m => (
+                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="in-tokens">Input Tokens</Label>
+                    <Input 
+                      id="in-tokens"
+                      type="number" 
+                      value={inTokens}
+                      onChange={(e) => setInTokens(e.target.value)}
+                      className="font-mono bg-background shadow-sm h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="out-tokens">Output Tokens</Label>
+                    <Input 
+                      id="out-tokens"
+                      type="number" 
+                      value={outTokens}
+                      onChange={(e) => setOutTokens(e.target.value)}
+                      className="font-mono bg-background shadow-sm h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="volume">Requests per Month</Label>
+                  <Input 
+                    id="volume"
+                    type="number" 
+                    value={volume}
+                    onChange={(e) => setVolume(e.target.value)}
+                    className="font-mono bg-background shadow-sm h-11"
+                  />
+                </div>
+
+                <Button 
+                  onClick={handleCalculate} 
+                  className="w-full h-12 text-base font-semibold shadow-md active-elevate-2 transition-all hover:-translate-y-0.5"
+                >
+                  <Calculator className="mr-2 w-5 h-5" /> Calculate Projection
+                </Button>
+              </div>
+
+              {/* Results */}
+              <div className="flex flex-col justify-center gap-6 p-6 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent border border-primary/10">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1 uppercase tracking-wider">Per Request Cost</div>
+                  <div className="flex items-baseline gap-2">
+                    <DollarSign className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-4xl font-bold font-mono tracking-tight text-foreground">
+                      {calculated.costUsd < 0.00001 ? calculated.costUsd.toExponential(4) : calculated.costUsd.toFixed(5)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1 font-mono flex items-center">
+                    <PoundSterling className="w-3 h-3 mr-0.5" />
+                    {(calculated.costUsd * GBP_RATE).toFixed(5)}
+                  </div>
+                </div>
+
+                <Separator className="bg-primary/10" />
+
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1 uppercase tracking-wider">Monthly Projection</div>
+                  <div className="flex items-baseline gap-2">
+                    <DollarSign className="w-6 h-6 text-primary" />
+                    <span className="text-5xl md:text-6xl font-black font-mono tracking-tighter text-primary">
+                      {calculated.monthlyUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="text-base text-muted-foreground mt-2 font-mono flex items-center font-medium">
+                    <PoundSterling className="w-4 h-4 mr-0.5" />
+                    {(calculated.monthlyUsd * GBP_RATE).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
+              
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </section>
+  );
+}

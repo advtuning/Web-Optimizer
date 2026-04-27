@@ -1,0 +1,208 @@
+Build a modern, fast, SEO-optimized utility website called "AITokenCalculator".
+
+The goal:
+A completely free, no-login, instant-access tool that allows users to:
+1. Select an AI model
+2. Estimate token usage for real-world projects
+3. Calculate cost instantly
+4. Explore example AI-powered projects
+5. Generate prompts/templates for building similar projects
+
+The UX must be extremely simple:
+- No signup or authentication
+- Everything accessible from the homepage
+- Minimal clicks (ideally 1–2 interactions max to get value)
+- Clean, modern UI (inspired by SaaS tools like Vercel, Stripe, Notion)
+- Fully responsive (mobile-first)
+- Fast load time (optimize for Core Web Vitals)
+
+-----------------------------------
+🔧 TECH STACK
+-----------------------------------
+- Frontend: Next.js (App Router) OR simple React + Vite (prefer performance)
+- Styling: Tailwind CSS
+- Data: Local JSON files (no database required)
+- Optional backend: lightweight API routes if needed
+- Deployment-ready for Replit + easy export
+
+-----------------------------------
+📊 CORE FEATURES
+-----------------------------------
+
+1. MODEL TOKEN PRICING (LOCAL JSON)
+- Store pricing for popular AI models locally (OpenAI, Anthropic, Google, etc.)
+- Do NOT rely on live APIs for pricing (avoid latency + rate limits)
+
+Example structure:
+{
+  "models": [
+    {
+      "name": "gpt-4.1",
+      "provider": "OpenAI",
+      "input_cost_per_1k": 0.01,
+      "output_cost_per_1k": 0.03,
+      "speed": "medium",
+      "use_case": "chat, reasoning"
+    }
+  ]
+}
+
+- Include at least 10–15 models
+- Make this easily extendable
+
+-----------------------------------
+
+2. MODEL DROPDOWN
+- Dropdown selector of all models
+- Display:
+  - Cost per 1K tokens (input/output)
+  - Speed label (fast / medium / slow)
+  - Use case tags
+- Default to a popular model
+
+-----------------------------------
+
+3. PROJECT LIBRARY (TOP 50 AI PROJECTS)
+- Store locally as JSON
+- Each project includes:
+  - name
+  - description
+  - category (SaaS, automation, content, chatbot, etc.)
+  - estimated_input_tokens
+  - estimated_output_tokens
+  - complexity (low / medium / high)
+
+- Show as scrollable cards or list
+- Allow filtering by category
+
+-----------------------------------
+
+4. TOKEN ESTIMATION ENGINE
+When a user selects:
+- a model
+- a project
+
+Calculate:
+- total tokens = input + output
+- cost = (input_tokens / 1000 * input_cost) + (output_tokens / 1000 * output_cost)
+
+Display clearly:
+- Token breakdown
+- Estimated cost (£ and $)
+- Optional “cheap / moderate / expensive” indicator
+
+-----------------------------------
+
+5. MANUAL COST CALCULATOR
+- Input fields:
+  - model dropdown
+  - input tokens
+  - output tokens
+
+- Button: "Calculate Cost"
+- Instant output of cost
+
+-----------------------------------
+
+6. PROMPT GENERATOR (BONUS FEATURE)
+- Button: "Generate Build Prompt"
+- Outputs a reusable AI prompt template
+
+Example output:
+"Build me a [PROJECT_NAME] using [MODEL].
+The app should include:
+- [FEATURE_1]
+- [FEATURE_2]
+
+Design style:
+- Colors: [PRIMARY_COLOR]
+- Theme: [THEME]
+
+Target audience: [AUDIENCE]
+Goal: [GOAL]"
+
+- Use placeholders so users can customise
+- Store prompt templates as JSON strings
+
+-----------------------------------
+
+💰 MONETISATION (IMPORTANT)
+-----------------------------------
+
+Integrate Google Ads (AdSense-ready layout):
+
+- Ad placements:
+  1. Top banner (below header)
+  2. Mid-content (between sections)
+  3. Bottom banner
+
+- Keep ads minimal and non-intrusive
+- Do NOT use popups or aggressive ads
+- Ensure layout does not break UX
+
+-----------------------------------
+
+🚀 SEO OPTIMISATION (2026 READY)
+-----------------------------------
+
+- Use proper semantic HTML
+- Optimise for keywords:
+  - "AI token calculator"
+  - "OpenAI cost calculator"
+  - "LLM pricing tool"
+  - "AI API cost estimator"
+
+- Include:
+  - Meta title + description
+  - OpenGraph tags
+  - Structured data (JSON-LD)
+  - Fast page load (lazy load where needed)
+
+- Create static SEO content sections:
+  - "What are AI tokens?"
+  - "How much do AI models cost?"
+  - "How to estimate token usage?"
+
+-----------------------------------
+
+🎨 UI / UX DETAILS
+-----------------------------------
+
+- Clean dashboard-style layout
+- Sections:
+  1. Hero (title + quick calculator)
+  2. Model selector + calculator
+  3. Project explorer
+  4. Manual calculator
+  5. Prompt generator
+  6. SEO content
+
+- Add subtle animations (hover, transitions)
+- Use cards, spacing, and modern typography
+
+-----------------------------------
+
+⚡ PERFORMANCE
+-----------------------------------
+
+- Use local JSON for instant load
+- Avoid unnecessary API calls
+- Optimise images/icons
+- Keep bundle size small
+
+-----------------------------------
+
+📦 FINAL OUTPUT
+-----------------------------------
+
+- Fully working app
+- Clean folder structure
+- Easy to modify JSON data
+- Ready to deploy
+- Comment key parts of the code
+
+-----------------------------------
+
+IMPORTANT:
+This must feel like a polished, production-ready free tool.
+The user should land on the homepage and get value immediately with zero friction.
