@@ -7,8 +7,7 @@
 #                 Vite bundle in /app/artifacts/ai-token-calculator/dist/public
 #   2. "runner"   serves the static bundle with nginx (no Node runtime)
 #
-# Build context: the MONOREPO ROOT (the directory that contains pnpm-workspace.yaml).
-# The accompanying docker-compose.yml already sets this up correctly.
+# Build context: the monorepo root (where this file lives).
 # ---------------------------------------------------------------------------
 
 ############################
@@ -55,7 +54,7 @@ RUN pnpm --filter @workspace/ai-token-calculator run build
 FROM nginx:1.27-alpine AS runner
 
 # Replace the default site config with our SPA-aware one.
-COPY artifacts/ai-token-calculator/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Drop in the built static assets.
 COPY --from=builder /app/artifacts/ai-token-calculator/dist/public /usr/share/nginx/html
