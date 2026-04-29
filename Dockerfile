@@ -13,11 +13,11 @@
 ############################
 # Stage 1 — build the SPA  #
 ############################
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
 WORKDIR /app
 
