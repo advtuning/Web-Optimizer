@@ -1,12 +1,19 @@
-# docker-compose.yml — AI Token Calculator
+# docker-compose.yml — AI Token Calculator + Cloudflare Tunnel
 #
-# Run from this directory:
+# Run from the monorepo root:
+#   docker compose -f artifacts/ai-token-calculator/docker-compose.yml up -d --build
+#
+# Or from this directory:
 #   docker compose up -d --build
 #
-# Then open http://localhost:8080
-#
-# The build context is the monorepo root (../..) because the Vite build needs
-# pnpm-workspace.yaml, the lockfile, and the lib/ packages to resolve deps.
+# Cloudflare Tunnel setup:
+#   1. Create a tunnel at https://one.dash.cloudflare.com/
+#   2. Copy the tunnel token and set it as an environment variable:
+#        export CLOUDFLARED_TOKEN=<your-tunnel-token>
+#      Or create a .env file next to this file:
+#        CLOUDFLARED_TOKEN=<your-tunnel-token>
+#   3. In the Cloudflare dashboard, set the tunnel's Public Hostname to point
+#      to http://ai-token-calculator:80 (the internal service name + port).
 
 services:
   ai-token-calculator:
@@ -15,16 +22,24 @@ services:
       context: ../..
       dockerfile: artifacts/ai-token-calculator/Dockerfile
       args:
-        # Set this to a sub-path (e.g. "/calc/") if you serve the app from a
-        # path prefix behind a reverse proxy. Must end with a trailing slash.
         BASE_PATH: /
     image: ai-token-calculator:latest
     restart: unless-stopped
-    ports:
-      - "8080:80"
+    expose:
+      - "80"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 5s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: ai-token-calculator-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN}
+    depends_on:
+      - ai-token-calculator
