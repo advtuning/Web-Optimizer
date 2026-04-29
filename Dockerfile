@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 # ---------------------------------------------------------------------------
 # AI Token Calculator — production image
 #
@@ -33,10 +32,9 @@ COPY scripts ./scripts
 COPY artifacts/ai-token-calculator ./artifacts/ai-token-calculator
 
 # Install only the dependency closure for this artifact.
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile \
-        --filter @workspace/ai-token-calculator... \
-        --filter @workspace/ai-token-calculator
+RUN pnpm install --frozen-lockfile \
+    --filter @workspace/ai-token-calculator... \
+    --filter @workspace/ai-token-calculator
 
 # Vite config requires PORT and BASE_PATH at build time.
 # BASE_PATH controls the public asset prefix in the built HTML.
