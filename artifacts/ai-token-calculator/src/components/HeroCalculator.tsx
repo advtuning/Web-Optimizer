@@ -7,14 +7,6 @@ import { getModelCostTier, modelAverageCost } from "@/lib/cost-tier";
 
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -50,6 +42,7 @@ export function HeroCalculator() {
   const [selectedModelId, setSelectedModelId] = useState(sortedModels[0].id);
   const [selectedProjectId, setSelectedProjectId] = useState(projects[0].id);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [mode, setMode] = useState<"project" | "custom">("project");
   const [customInputTokens, setCustomInputTokens] = useState<number>(1000);
   const [customOutputTokens, setCustomOutputTokens] = useState<number>(500);
@@ -108,9 +101,14 @@ export function HeroCalculator() {
                   <Cpu className="w-4 h-4 text-primary" />
                   Select Model
                 </label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between bg-background h-12 text-left font-normal border-border/50 shadow-sm hover-elevate">
+                <Popover open={modelPickerOpen} onOpenChange={setModelPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={modelPickerOpen}
+                      className="w-full justify-between bg-background h-12 text-left font-normal border-border/50 shadow-sm hover-elevate"
+                    >
                       <div className="flex items-center gap-2 truncate">
                         <span
                           className={`inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded font-mono text-[11px] font-bold ${modelTier.bgClass} ${modelTier.textClass}`}
@@ -126,40 +124,57 @@ export function HeroCalculator() {
                       </div>
                       <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-[340px] overflow-y-auto">
-                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                      <span>Sorted: cheap to premium</span>
-                      <span className="font-mono normal-case tracking-normal text-muted-foreground/70">avg $/1K</span>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {sortedModels.map(m => {
-                      const tier = getModelCostTier(m.input_cost_per_1k, m.output_cost_per_1k);
-                      const avg = modelAverageCost(m.input_cost_per_1k, m.output_cost_per_1k);
-                      return (
-                        <DropdownMenuItem
-                          key={m.id}
-                          onClick={() => setSelectedModelId(m.id)}
-                          className="flex items-center gap-2 cursor-pointer py-2"
-                        >
-                          <span
-                            className={`inline-flex items-center justify-center h-5 min-w-6 px-1.5 rounded font-mono text-[10px] font-bold ${tier.bgClass} ${tier.textClass} flex-shrink-0`}
-                          >
-                            {tier.symbol}
-                          </span>
-                          <div className="flex flex-col flex-1 min-w-0">
-                            <span className="truncate text-sm">{m.name}</span>
-                            <span className="text-[10px] text-muted-foreground truncate">{m.provider}</span>
-                          </div>
-                          <span className="text-[10px] font-mono text-muted-foreground tabular-nums flex-shrink-0">
-                            ${avg < 0.001 ? avg.toFixed(5) : avg.toFixed(4)}
-                          </span>
-                          {selectedModelId === m.id && <Check className="w-4 h-4 ml-1 flex-shrink-0" />}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <div className="flex items-center border-b px-3">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <CommandInput
+                          placeholder={`Search ${sortedModels.length} models...`}
+                          className="border-0 focus:ring-0 h-11"
+                        />
+                      </div>
+                      <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-between border-b bg-muted/30">
+                        <span>Sorted: cheap to premium</span>
+                        <span className="font-mono normal-case tracking-normal text-muted-foreground/70">avg $/1K</span>
+                      </div>
+                      <CommandList className="max-h-[320px]">
+                        <CommandEmpty>No matching model found.</CommandEmpty>
+                        <CommandGroup>
+                          {sortedModels.map(m => {
+                            const tier = getModelCostTier(m.input_cost_per_1k, m.output_cost_per_1k);
+                            const avg = modelAverageCost(m.input_cost_per_1k, m.output_cost_per_1k);
+                            return (
+                              <CommandItem
+                                key={m.id}
+                                value={`${m.name} ${m.provider} ${tier.label}`}
+                                onSelect={() => {
+                                  setSelectedModelId(m.id);
+                                  setModelPickerOpen(false);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer py-2"
+                              >
+                                <span
+                                  className={`inline-flex items-center justify-center h-5 min-w-6 px-1.5 rounded font-mono text-[10px] font-bold ${tier.bgClass} ${tier.textClass} flex-shrink-0`}
+                                >
+                                  {tier.symbol}
+                                </span>
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="truncate text-sm">{m.name}</span>
+                                  <span className="text-[10px] text-muted-foreground truncate">{m.provider}</span>
+                                </div>
+                                <span className="text-[10px] font-mono text-muted-foreground tabular-nums flex-shrink-0">
+                                  ${avg < 0.001 ? avg.toFixed(5) : avg.toFixed(4)}
+                                </span>
+                                {selectedModelId === m.id && <Check className="w-4 h-4 ml-1 flex-shrink-0 text-primary" />}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <Tabs value={mode} onValueChange={(v) => setMode(v as "project" | "custom")} className="w-full">
