@@ -15,7 +15,7 @@ const FALLBACK_RATE = 0.79;
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
-  const [currency, setCurrency] = useState<Currency>("USD");
+  const [currency, setCurrency] = useState<Currency>("GBP");
   const [rate, setRate] = useState(FALLBACK_RATE);
   const [rateStatus, setRateStatus] = useState<"loading" | "live" | "fallback">("loading");
 
