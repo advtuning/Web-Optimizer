@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import CookieBanner from "@/components/CookieBanner";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,11 @@ function App() {
           </WouterRouter>
           <Toaster />
         </CurrencyProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <Router />
+        </WouterRouter>
+        <Toaster />
+        <CookieBanner />
       </TooltipProvider>
     </QueryClientProvider>
   );

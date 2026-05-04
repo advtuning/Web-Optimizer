@@ -12,31 +12,20 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] flex flex-col font-sans selection:bg-primary/20 selection:text-primary">
       <Header />
-      
       <main className="flex-1 flex flex-col">
         <HeroCalculator />
-        
         <div className="py-6 px-4">
-          <AdSlot />
+          <AdSlot className="max-w-[728px] h-[90px]" />
         </div>
-        
         <ModelPicker />
         <ProjectLibrary />
-        
-        <div className="py-6 px-4">
-          <AdSlot />
+        <div className="py-6 px-4 flex justify-center">
+          <AdSlot className="w-[300px] max-w-[300px] h-[250px]" />
         </div>
-        
         <ManualCalculator />
         <PromptGenerator />
-        
         <SeoContent />
-        
-        <div className="py-10 px-4 bg-card">
-          <AdSlot />
-        </div>
       </main>
-
       <Footer />
     </div>
   );

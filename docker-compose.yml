@@ -1,0 +1,42 @@
+# docker-compose.yml — AI Token Calculator + Cloudflare Tunnel
+#
+# Run from the repo root:
+#   docker compose up -d --build
+#
+# Cloudflare Tunnel setup:
+#   1. Create a tunnel at https://one.dash.cloudflare.com/
+#   2. Copy the tunnel token and set it as an environment variable:
+#        export CLOUDFLARED_TOKEN=<your-tunnel-token>
+#      Or create a .env file in the repo root:
+#        CLOUDFLARED_TOKEN=<your-tunnel-token>
+#   3. In the Cloudflare dashboard, set the tunnel's Public Hostname to point
+#      to http://ai-token-calculator:80 (the internal service name + port).
+
+services:
+  ai-token-calculator:
+    container_name: ai-token-calculator
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_PATH: /
+    image: ai-token-calculator:latest
+    restart: unless-stopped
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: ai-token-calculator-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN}
+    depends_on:
+      - ai-token-calculator
