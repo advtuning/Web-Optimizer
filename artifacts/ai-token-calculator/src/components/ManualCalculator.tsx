@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Calculator, DollarSign, PoundSterling, SlidersHorizontal } from "lucide-react";
+import { Calculator, SlidersHorizontal } from "lucide-react";
 import modelsData from "@/data/models.json";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { getModelCostTier, modelAverageCost } from "@/lib/cost-tier";
-
-const GBP_RATE = 0.79;
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 export function ManualCalculator() {
+  const { format, currency, rateStatus } = useCurrency();
   const models = modelsData.models;
   const sortedModels = useMemo(
     () =>
@@ -145,14 +145,13 @@ export function ManualCalculator() {
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1 uppercase tracking-wider">Per Request Cost</div>
                   <div className="flex items-baseline gap-2">
-                    <DollarSign className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-muted-foreground font-mono text-lg">{currency === "GBP" ? "£" : "$"}</span>
                     <span className="text-4xl font-bold font-mono tracking-tight text-foreground">
-                      {calculated.costUsd < 0.00001 ? calculated.costUsd.toExponential(4) : calculated.costUsd.toFixed(5)}
+                      {format(calculated.costUsd, { decimals: calculated.costUsd < 0.001 ? 5 : 4 }).replace(/^[$£]/, "")}
                     </span>
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1 font-mono flex items-center">
-                    <PoundSterling className="w-3 h-3 mr-0.5" />
-                    {(calculated.costUsd * GBP_RATE).toFixed(5)}
+                  <div className="text-xs text-muted-foreground mt-1 font-mono">
+                    {currency === "GBP" ? "≈ " + format(calculated.costUsd, { decimals: 4 }).replace("£", "$") + " USD" : ""}
                   </div>
                 </div>
 
@@ -161,14 +160,13 @@ export function ManualCalculator() {
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1 uppercase tracking-wider">Monthly Projection</div>
                   <div className="flex items-baseline gap-2">
-                    <DollarSign className="w-6 h-6 text-primary" />
+                    <span className="text-primary font-mono text-2xl">{currency === "GBP" ? "£" : "$"}</span>
                     <span className="text-5xl md:text-6xl font-black font-mono tracking-tighter text-primary">
-                      {calculated.monthlyUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {format(calculated.monthlyUsd, { decimals: 2 }).replace(/^[$£]/, "")}
                     </span>
                   </div>
-                  <div className="text-base text-muted-foreground mt-2 font-mono flex items-center font-medium">
-                    <PoundSterling className="w-4 h-4 mr-0.5" />
-                    {(calculated.monthlyUsd * GBP_RATE).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <div className="text-xs text-muted-foreground mt-1 font-mono">
+                    per month{rateStatus === "live" ? " · live rate" : rateStatus === "fallback" ? " · est. rate" : ""}
                   </div>
                 </div>
               </div>

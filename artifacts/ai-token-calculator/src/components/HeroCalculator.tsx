@@ -4,6 +4,7 @@ import { ChevronDown, Check, Zap, Cpu, CircleDollarSign, Sliders, Search } from 
 import modelsData from "@/data/models.json";
 import projectsData from "@/data/projects.json";
 import { getModelCostTier, modelAverageCost } from "@/lib/cost-tier";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,9 +24,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-
-// GBP conversion rate
-const GBP_RATE = 0.79;
 
 export function HeroCalculator() {
   const models = modelsData.models;
@@ -67,7 +65,7 @@ export function HeroCalculator() {
     model.output_cost_per_1k
   );
 
-  const costGbp = costUsd * GBP_RATE;
+  const { format, currency, rateStatus, rate } = useCurrency();
 
   // Monthly cost projection
   const monthlyCostUsd = costUsd * monthlyVolume;
@@ -356,18 +354,18 @@ export function HeroCalculator() {
               <div className="space-y-8">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-2">Cost per Request</div>
-                  <div className="flex items-baseline gap-3">
-                    <motion.div 
-                      key={costUsd}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-5xl md:text-7xl font-bold tracking-tighter text-foreground font-mono"
-                    >
-                      ${costUsd < 0.0001 ? costUsd.toFixed(5) : costUsd.toFixed(4)}
-                    </motion.div>
-                    <div className="text-xl md:text-2xl text-muted-foreground font-mono">
-                      / £{(costGbp < 0.0001 ? costGbp.toFixed(5) : costGbp.toFixed(4))}
-                    </div>
+                  <motion.div
+                    key={`${costUsd}-${currency}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-5xl md:text-7xl font-bold tracking-tighter text-foreground font-mono"
+                  >
+                    {format(costUsd, { decimals: costUsd < 0.0001 ? 5 : 4 })}
+                  </motion.div>
+                  <div className="text-sm text-muted-foreground mt-1 font-mono">
+                    {currency === "USD"
+                      ? `≈ £${(costUsd * rate).toFixed(costUsd < 0.0001 ? 5 : 4)} GBP (${rateStatus === "live" ? "live rate" : "est."})`
+                      : `≈ $${costUsd.toFixed(costUsd < 0.0001 ? 5 : 4)} USD`}
                   </div>
                 </div>
 
@@ -375,7 +373,14 @@ export function HeroCalculator() {
                   <div>
                     <div className="text-sm font-medium text-muted-foreground mb-1">Monthly Estimate</div>
                     <div className="flex items-baseline gap-2">
-                      <div className="text-2xl font-bold font-mono">${monthlyCostUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <motion.div
+                        key={`${monthlyCostUsd}-${currency}`}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-2xl font-bold font-mono"
+                      >
+                        {format(monthlyCostUsd, { decimals: 2 })}
+                      </motion.div>
                       <div className="text-sm text-muted-foreground">/mo</div>
                     </div>
                   </div>
