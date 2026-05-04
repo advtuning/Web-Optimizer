@@ -151,7 +151,7 @@ export function ManualCalculator() {
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 font-mono">
-                    {currency === "GBP" ? "≈ " + format(calculated.costUsd, { decimals: 4 }).replace("£", "$") + " USD" : ""}
+                    {currency === "GBP" ? `≈ $${calculated.costUsd.toFixed(calculated.costUsd < 0.001 ? 5 : 4)} USD` : ""}
                   </div>
                 </div>
 
